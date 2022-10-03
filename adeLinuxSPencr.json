@@ -1,0 +1,351 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+    "metadata": {
+		"description": "Deploys ADE environment with AAD ( 1 Key vault, 1 BEK encrypted Ubuntu VM) based on Ryan McCallum templates",
+		"author": "Didier Ambroise"
+  },
+  "parameters": {
+    "vaultName": {
+      "defaultValue": "[concat('keyvault-', uniqueString(resourceGroup().id))]",
+      "type": "String"
+    },
+    "keyName": {
+      "defaultValue": "[concat('key-', uniqueString(resourceGroup().id))]",
+      "type": "String"
+    },
+    "location": {
+      "defaultValue": "[resourceGroup().location]",
+      "type": "String"
+    },
+    "objectId": {
+      "defaultValue": "",
+      "type": "String",
+      "metadata": {
+        "description": "Specifies your object ID. Get it by using Get-AzADUser cmdlet."
+      }
+    },
+    "adminUsername": {
+      "maxLength": 20,
+      "type": "String",
+      "metadata": {
+        "description": "Username for the Virtual Machine."
+      }
+    },
+    "adminPassword": {
+      "minLength": 12,
+      "type": "SecureString",
+      "metadata": {
+        "description": "Password for the Virtual Machine."
+      }
+    },
+    "vmSize": {
+      "defaultValue": "Standard_B2ms",
+      "type": "String",
+      "metadata": {
+        "description": "Default VM Size"
+      }
+    },
+    "dnsNameForPublicIP": {
+      "defaultValue": "[tolower(concat('dns', uniquestring(resourceGroup().id)))]",
+      "type": "String",
+      "metadata": {
+        "description": "DNS name for the public IP"
+      }
+    },
+    "storageUri": {
+      "defaultValue": "[format('store{0}', uniqueString(resourceGroup().id))]",
+      "type": "String",
+      "metadata": {
+        "description": "Name of storage account For Boot Diagnostics"
+      }
+    },
+    "storageAccountType": {
+      "defaultValue": "Standard_LRS",
+      "type": "String",
+      "metadata": {
+        "description": "Storage Account type"
+      }
+    }
+  },
+  "variables": {
+    "nicName": "myVMNic",
+    "addressPrefix": "10.0.0.0/16",
+    "subnetName": "Subnet",
+    "subnetPrefix": "10.0.0.0/24",
+    "subnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]",
+    "vmName": "adeLinux",
+    "virtualNetworkName": "MyVNET",
+    "publicIPAddressName": "myPublicIP",
+    "networkSecurityGroupName": "default-NSG",
+    "encryptionOperation": "EnableEncryption",
+    "KeyEncryptionAlgorithm": "RSA-OAEP",
+    "KeyVaultURL": "[concat('https://', parameters('vaultName'), '.vault.azure.net/')]",
+    "KeyVaultResourceId": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.KeyVault/vaults/', parameters('vaultName'))]",
+    "VolumeType": "OS"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2019-09-01",
+      "name": "[parameters('vaultName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "enabledForDeployment": "[true()]",
+        "enabledForDiskEncryption": "[true()]",
+        "enabledForTemplateDeployment": "[true()]",
+        "enableSoftDelete": "[true()]",
+        "softDeleteRetentionInDays": 7,
+        "enablePurgeProtection": "[true()]",
+        "tenantId": "[subscription().tenantId]",
+        "accessPolicies": [
+          {
+            "objectId": "[parameters('objectId')]",
+            "tenantId": "[subscription().tenantId]",
+            "permissions": {
+              "keys": [
+                "Get",
+                "List",
+                "Update",
+                "Create",
+                "Import",
+                "Delete",
+                "Recover",
+                "Backup",
+                "Restore",
+                "Decrypt",
+                "Encrypt",
+                "UnwrapKey",
+                "WrapKey",
+                "Verify",
+                "Sign",
+                "Release",
+                "Rotate",
+                "GetRotationPolicy",
+                "SetRotationPolicy",
+                "Purge"
+              ],
+              "secrets": [
+                "Get",
+                "List",
+                "Set",
+                "Delete",
+                "Recover",
+                "Backup",
+                "Restore",
+                "Purge"
+              ],
+              "certificates": [
+                "Get",
+                "List",
+                "Update",
+                "Create",
+                "Import",
+                "Delete",
+                "Recover",
+                "Backup",
+                "Restore",
+                "ManageContacts",
+                "ManageIssuers",
+                "GetIssuers",
+                "ListIssuers",
+                "SetIssuers",
+                "DeleteIssuers",
+                "Purge"
+              ]
+            }
+          }
+        ],
+        "sku": {
+          "name": "Standard",
+          "family": "A"
+        },
+        "networkAcls": {
+          "defaultAction": "Allow",
+          "bypass": "AzureServices"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/keys",
+      "apiVersion": "2021-10-01",
+      "name": "[concat(parameters('vaultName'), '/', parameters('keyName'))]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('vaultName'))]"
+      ],
+      "properties": {
+        "kty": "RSA",
+        "keySize": 4096
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2020-08-01",
+      "name": "[variables('publicIPAddressName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic",
+        "dnsSettings": {
+          "domainNameLabel": "[parameters('dnsNameForPublicIP')]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2020-08-01",
+      "name": "[variables('networkSecurityGroupName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": []
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2020-08-01",
+      "name": "[variables('virtualNetworkName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+      ],
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('addressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('subnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('subnetPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2020-08-01",
+      "name": "[variables('nicName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[variables('publicIPAddressName')]",
+        "[variables('virtualNetworkName')]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]"
+              },
+              "subnet": {
+                "id": "[variables('subnetRef')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2021-06-01",
+      "name": "[parameters('storageUri')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "[parameters('storageAccountType')]"
+      },
+      "kind": "StorageV2",
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2020-12-01",
+      "name": "[variables('vmName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[variables('nicName')]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[variables('vmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "Canonical",
+            "offer": "UbuntuServer",
+            "sku": "18.04-LTS",
+            "version": "latest"
+          },
+          "osDisk": {
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "StandardSSD_LRS"
+            }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('nicName'))]"
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true,
+            "storageUri": "[concat('https://', parameters('storageUri'), '.blob.core.windows.net')]"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "apiVersion": "2019-07-01",
+      "name": "[concat(variables('vmName'),'/AzureDiskEncryptionForLinux')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines/', variables('vmName'))]"
+      ],
+      "properties": {
+        "publisher": "Microsoft.Azure.Security",
+        "type": "AzureDiskEncryptionForLinux",
+        "typeHandlerVersion": "1.1",
+        "autoUpgradeMinorVersion": false,
+        "settings": {
+          "AntimalwareEnabled": false,
+          "EncryptionOperation": "[variables('encryptionOperation')]",
+          "KeyEncryptionAlgorithm": "[variables('KeyEncryptionAlgorithm')]",
+          "KeyVaultURL": "[variables('KeyVaultURL')]",
+          "KeyVaultResourceId": "[variables('KeyVaultResourceId')]",
+          "VolumeType": "[variables('VolumeType')]"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "vaultName": {
+      "type": "String",
+      "value": "[parameters('vaultName')]"
+    },
+    "vaultResourceGroup": {
+      "type": "String",
+      "value": "[resourceGroup().name]"
+    },
+    "location": {
+      "type": "String",
+      "value": "[parameters('location')]"
+    }
+  }
+}
