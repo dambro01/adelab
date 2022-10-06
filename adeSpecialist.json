@@ -28,7 +28,7 @@
     "objectId": {
       "type": "String",
       "metadata": {
-        "description": "Specifies your object ID. Get it by using Get-AzADUser cmdlet."
+        "description": "Specifies your object ID. Get it by using Get-AzADUser -SignedIn cmdlet."
       }
     },
     "roleName": {
