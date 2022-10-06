@@ -83,8 +83,8 @@
     "virtualNetworkName": "MyVNET",
     "publicIPAddressName": "myPublicIP",
     "networkSecurityGroupName": "default-NSG",
-    "windowsVMCount": 5,
-    "linuxVMCount": 2,
+    "windowsVMCount": 6,
+    "linuxVMCount": 3,
     "roleIdMapping": {
       "Key Vault Administrator": "00482a5a-887f-4fb3-b363-3b7fe8e74483",
       "Key Vault Certificates Officer": "a4417e6f-fecd-4de8-b567-7b0420556985",
