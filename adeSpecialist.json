@@ -36,7 +36,6 @@
       "type": "String"
     },
     "adminUsername": {
-      "defaultValue": "azureadmin",
       "maxLength": 20,
       "type": "String",
       "metadata": {
