@@ -1,9 +1,9 @@
 #!/bin/bash
 
 mkdir /data
-parted /dev/disk/azure/scsi1/lun0 --script mklabel gpt mkpart xfspart xfs 0% 100%
-echo "y" | mkfs.xfs -f /dev/disk/azure/scsi1/lun0-part1
-partprobe /dev/disk/azure/scsi1/lun0-part1
-UUID="$(blkid -s UUID -o value /dev/disk/azure/scsi1/lun0-part1)"
-echo "UUID=$UUID /data xfs defaults,nofail 0 0" >>/etc/fstab
+/usr/bin/printf "o\nn\np\n1\n\n\nt\n83\nw\n" |fdisk /dev/disk/azure/scsi1/lun0
+/usr/bin/echo "y" | /usr/sbin/mkfs.xfs -f /dev/disk/azure/scsi1/lun0-part1
+/usr/sbin/partprobe /dev/disk/azure/scsi1/lun0-part1
+UUID="$(/usr/sbin/blkid -s UUID -o value /dev/disk/azure/scsi1/lun0-part1)"
+/usr/bin/echo "UUID=$UUID /data xfs defaults,nofail 0 0" >>/etc/fstab
 mount -a
