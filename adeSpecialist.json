@@ -1,71 +1,63 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
-  	"metadata": {
-		"description": "Deploys ADE environment 1 Key vault, 1 Disk Encryption Set, 1 Key, 2 Linux VMs, 5 Windows VMs",
-		"author": "Didier Ambroise",
-		"GitHub": "https://github.com/dambro01/adelab",
-		"Enablement": "https://learn.microsoft.com/en-us/troubleshoot/azure/virtual-machines/welcome-virtual-machines",
-		"deploymentLink": "https://labbox.azurewebsites.net/api/Labbox?url=https://raw.githubusercontent.com/dambro01/adelab/main/adeSpecialist.json"
-	},
+  "metadata": {
+    "description": "Deploys ADE environment 1 Key vault, 2 Disk Encryption Set, 1 Key, 2 Linux VMs, 5 Windows VMs",
+    "author": "Didier Ambroise",
+    "GitHub": "https://github.com/dambro01/adelab",
+    "Enablement": "https://learn.microsoft.com/en-us/troubleshoot/azure/virtual-machines/welcome-virtual-machines",
+    "deploymentLink": "https://labbox.azurewebsites.net/api/Labbox?url=https://raw.githubusercontent.com/dambro01/adelab/main/adeSpecialist.json"
+  },
   "parameters": {
     "vaultName": {
       "defaultValue": "[concat('keyvault-', uniqueString(resourceGroup().id))]",
-      "type": "String"
-    },
-    "keyName": {
-      "defaultValue": "[concat('key-', uniqueString(resourceGroup().id))]",
-      "type": "String"
-    },
-    "diskencsetName": {
-      "defaultValue": "[concat('des-', uniqueString(resourceGroup().id))]",
-      "type": "String"
+      "type": "string"
     },
     "location": {
       "defaultValue": "[resourceGroup().location]",
-      "type": "String"
+      "type": "string"
     },
     "objectId": {
-      "type": "String",
+      "type": "string",
       "metadata": {
-        "description": "Specifies your object ID. Get it by using Get-AzADUser -SignedIn cmdlet."
+        "description": "Specifies your object ID. Get it by using Get-AzADUser -SignedIn PowerShell cmdlet."
       }
     },
     "roleName": {
       "defaultValue": "Key Vault Administrator",
-      "type": "String"
+      "type": "string"
     },
     "adminUsername": {
       "maxLength": 20,
-      "type": "String",
+      "type": "string",
       "metadata": {
         "description": "Username for the Virtual Machines."
       }
     },
     "adminPassword": {
       "minLength": 12,
-      "type": "SecureString",
+      "type": "securestring",
       "metadata": {
         "description": "Password for the Virtual Machines."
       }
     },
     "vmSize": {
       "defaultValue": "Standard_B2ms",
-      "type": "String",
+      "type": "string",
       "metadata": {
         "description": "Default VM Size."
       }
     },
     "storageUri": {
       "defaultValue": "[format('store{0}', uniqueString(resourceGroup().id))]",
-      "type": "String",
+      "type": "string",
       "metadata": {
         "description": "Name of storage account For Boot Diagnostics"
       }
     },
     "storageAccountType": {
       "defaultValue": "Standard_LRS",
-      "type": "String",
+      "type": "string",
       "metadata": {
         "description": "Storage Account type"
       }
@@ -82,8 +74,12 @@
     "virtualNetworkName": "MyVNET",
     "publicIPAddressName": "myPublicIP",
     "networkSecurityGroupName": "default-NSG",
-    "windowsVMCount": 6,
-    "linuxVMCount": 3,
+    "windowsVMCount": 5,
+    "linuxVMCount": 2,
+    "keyName": "key-1",
+    "key2Name": "key-2",
+    "diskencsetName": "des-cmk",
+    "diskencset2Name": "des-pmkcmk",
     "roleIdMapping": {
       "Key Vault Administrator": "00482a5a-887f-4fb3-b363-3b7fe8e74483",
       "Key Vault Certificates Officer": "a4417e6f-fecd-4de8-b567-7b0420556985",
@@ -98,7 +94,7 @@
   "resources": [
     {
       "type": "Microsoft.KeyVault/vaults",
-      "apiVersion": "2022-07-01",
+      "apiVersion": "2021-11-01-preview",
       "name": "[parameters('vaultName')]",
       "location": "[parameters('location')]",
       "properties": {
@@ -110,7 +106,8 @@
         "enabledForDeployment": "[true()]",
         "enabledForDiskEncryption": "[true()]",
         "enabledForTemplateDeployment": "[true()]",
-        "enableSoftDelete": "[false()]",
+        "enableSoftDelete": "[true()]",
+        "enablePurgeProtection": "[true()]",
         "enableRbacAuthorization": "[true()]",
         "networkAcls": {
           "defaultAction": "Allow",
@@ -120,7 +117,7 @@
     },
     {
       "type": "Microsoft.Authorization/roleAssignments",
-      "apiVersion": "2022-04-01",
+      "apiVersion": "2020-10-01-preview",
       "name": "[guid(variables('roleIdMapping')[parameters('roleName')], parameters('objectId'), resourceId('Microsoft.KeyVault/vaults', parameters('vaultName')))]",
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', parameters('vaultName'))]"
@@ -134,8 +131,21 @@
     },
     {
       "type": "Microsoft.KeyVault/vaults/keys",
-      "apiVersion": "2022-07-01",
-      "name": "[concat(parameters('vaultName'), '/', parameters('keyName'))]",
+      "apiVersion": "2021-11-01-preview",
+      "name": "[concat(parameters('vaultName'), '/', variables('keyName'))]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('vaultName'))]"
+      ],
+      "properties": {
+        "kty": "RSA",
+        "keySize": 4096
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/keys",
+      "apiVersion": "2021-11-01-preview",
+      "name": "[concat(parameters('vaultName'), '/', variables('key2Name'))]",
       "location": "[parameters('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', parameters('vaultName'))]"
@@ -147,11 +157,11 @@
     },
     {
       "type": "Microsoft.Compute/diskEncryptionSets",
-      "apiVersion": "2022-03-02",
-      "name": "[parameters('diskencsetName')]",
+      "apiVersion": "2021-12-01",
+      "name": "[variables('diskencsetName')]",
       "location": "[parameters('location')]",
       "dependsOn": [
-        "[resourceId('Microsoft.KeyVault/vaults/keys', parameters('vaultName'), parameters('keyName'))]"
+        "[resourceId('Microsoft.KeyVault/vaults/keys', parameters('vaultName'), variables('keyName'))]"
       ],
       "identity": {
         "type": "SystemAssigned"
@@ -161,8 +171,29 @@
           "sourceVault": {
             "id": "[resourceId('Microsoft.KeyVault/vaults', parameters('vaultName'))]"
           },
-          "keyUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/keys', parameters('vaultName'), parameters('keyName')), '2019-09-01', 'Full').properties.keyUriWithVersion]"
+          "keyUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/keys', parameters('vaultName'), variables('keyName')), '2019-09-01', 'Full').properties.keyUriWithVersion]"
         }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/diskEncryptionSets",
+      "apiVersion": "2021-12-01",
+      "name": "[variables('diskencset2Name')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults/keys', parameters('vaultName'), variables('keyName'))]"
+      ],
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "activeKey": {
+          "sourceVault": {
+            "id": "[resourceId('Microsoft.KeyVault/vaults', parameters('vaultName'))]"
+          },
+          "keyUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/keys', parameters('vaultName'), variables('keyName')), '2019-09-01', 'Full').properties.keyUriWithVersion]"
+        },
+        "encryptionType": "EncryptionAtRestWithPlatformAndCustomerKeys"
       }
     },
     {
@@ -334,7 +365,14 @@
             "managedDisk": {
               "storageAccountType": "StandardSSD_LRS"
             }
-          }
+          },
+          "dataDisks": [
+            {
+              "diskSizeGB": 4,
+              "lun": 0,
+              "createOption": "Empty"
+            }
+          ]
         },
         "networkProfile": {
           "networkInterfaces": [
@@ -353,6 +391,31 @@
       "copy": {
         "name": "linuxVMcopy",
         "count": "[variables('linuxVMCount')]"
+      }
+    },
+    {
+      "name": "[concat(variables('linuxVMName'), copyIndex(1), '/runLinuxScriptinCSE')]",
+      "copy": {
+        "count": "[variables('linuxVMCount')]",
+        "name": "linuxVMCSEcopy"
+      },
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2019-03-01",
+      "dependsOn": [
+        "linuxVMcopy"
+      ],
+      "properties": {
+        "publisher": "Microsoft.Azure.Extensions",
+        "type": "CustomScript",
+        "typeHandlerVersion": "2.1",
+        "autoUpgradeMinorVersion": true,
+        "protectedSettings": {
+          "commandToExecute": "sudo bash linuxdata.sh",
+          "fileUris": [
+            "https://raw.githubusercontent.com/dambro01/adelab/main/linuxdata.sh"
+          ]
+        }
       }
     }
   ],
