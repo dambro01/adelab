@@ -413,7 +413,7 @@
         "protectedSettings": {
           "commandToExecute": "bash linuxdata.sh",
           "fileUris": [
-            "https://raw.githubusercontent.com/dambro01/adelab/main/linuxdata.sh"
+            "https://raw.githubusercontent.com/dambro01/adelab/main/scripts/linuxdata.sh"
           ]
         }
       }
