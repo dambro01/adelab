@@ -1,7 +1,7 @@
 #!/bin/bash
 mkdir /data
 parted -s /dev/disk/azure/scsi1/lun0 mklabel gpt
-parted -s /dev/disk/azure/scsi1/lun0 mkpart primary ext4 0% 100%
+parted -s /dev/disk/azure/scsi1/lun0 mkpart primary 0% 100%
 sleep 5
 mkfs.xfs /dev/disk/azure/scsi1/lun0-part1
 sleep 10
