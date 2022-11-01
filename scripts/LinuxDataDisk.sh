@@ -1,7 +1,6 @@
 #!/bin/bash
 mkdir /data
 parted /dev/disk/azure/scsi1/lun0 --script mklabel gpt mkpart xfspart xfs 0% 100%
-mkfs.xfs -f /dev/disk/azure/scsi1/lun0-part1
 sleep 5
 mkfs.xfs -f /dev/disk/azure/scsi1/lun0-part1
 partprobe /dev/disk/azure/scsi1/lun0-part1
