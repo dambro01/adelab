@@ -2,7 +2,7 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "WindowsVMName": {
+    "vmName": {
       "type": "string",
       "metadata": {
         "description": "Name of the Virtual Machine"
@@ -25,7 +25,7 @@
     {
       "apiVersion": "2016-04-30-preview",
       "type": "Microsoft.Compute/virtualMachines",
-      "name": "[variables('WindowsVMName')]",
+      "name": "[variables('vmName')]",
       "location": "[parameters('location')]",
       "properties": {
         "storageProfile": {
