@@ -19,20 +19,6 @@
       "metadata": {
         "description": "KeyVault secret Url. Ex: https://diskencryptiontestaus.vault.azure.net/secrets/BitLockerEncryptionSecretWithKek/e088818e865e48488cf363af16dea596"
       }
-    },
-    "keyEncryptionKeyURL": {
-      "type": "string",
-      "defaultValue": "",
-      "metadata": {
-        "description": "KeyVault key encryption key Url. Ex: https://diskencryptiontestaus.vault.azure.net/keys/DiskEncryptionKek/562a4bb76b524a1493a6afe8e536ee78"
-      }
-    },
-    "location": {
-      "type": "string",
-      "defaultValue": "[resourceGroup().location]",
-      "metadata": {
-        "description": "Location for all resources."
-      }
     }
   },
   "resources": [
