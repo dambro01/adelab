@@ -25,7 +25,7 @@
     {
       "apiVersion": "2016-04-30-preview",
       "type": "Microsoft.Compute/virtualMachines",
-      "name": "[variables('vmName')]",
+      "name": "[parameters('vmName')]",
       "location": "[parameters('location')]",
       "properties": {
         "storageProfile": {
