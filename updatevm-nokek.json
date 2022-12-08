@@ -9,6 +9,13 @@
         "description": "Name of the Virtual Machine"
       }
     },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources."
+      }
+    },
     "keyVaultResourceID": {
       "type": "string",
       "metadata": {
