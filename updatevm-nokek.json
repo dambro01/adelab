@@ -4,6 +4,7 @@
   "parameters": {
     "vmName": {
       "type": "string",
+      "defaultValue": "WindowsLab",
       "metadata": {
         "description": "Name of the Virtual Machine"
       }
