@@ -96,54 +96,13 @@
 						"tenantId": "[subscription().tenantId]",
 						"permissions": {
 							"keys": [
-								"Get",
-								"List",
-								"Update",
-								"Create",
-								"Import",
-								"Delete",
-								"Recover",
-								"Backup",
-								"Restore",
-								"Decrypt",
-								"Encrypt",
-								"UnwrapKey",
-								"WrapKey",
-								"Verify",
-								"Sign",
-								"Release",
-								"Rotate",
-								"GetRotationPolicy",
-								"SetRotationPolicy",
-								"Purge"
+								"all"
 							],
 							"secrets": [
-								"Get",
-								"List",
-								"Set",
-								"Delete",
-								"Recover",
-								"Backup",
-								"Restore",
-								"Purge"
+								"all"
 							],
 							"certificates": [
-								"Get",
-								"List",
-								"Update",
-								"Create",
-								"Import",
-								"Delete",
-								"Recover",
-								"Backup",
-								"Restore",
-								"ManageContacts",
-								"ManageIssuers",
-								"GetIssuers",
-								"ListIssuers",
-								"SetIssuers",
-								"DeleteIssuers",
-								"Purge"
+								"all"
 							]
 						}
 					},
