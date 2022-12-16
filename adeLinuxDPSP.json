@@ -75,7 +75,8 @@
 		"location": "[resourceGroup().location]",
 		"storageUri": "[format('store{0}', uniqueString(resourceGroup().id))]",
 		"keyName": "[concat('key-', uniqueString(resourceGroup().id))]",
-		"vaultName": "[concat('keyvault-', uniqueString(resourceGroup().id))]"
+		"vaultName": "[concat('keyvault-', uniqueString(resourceGroup().id))]",
+		"dnsLabelPrefix": "[toLower(concat('adeWin-', uniqueString(resourceGroup().id)))]"
 	},
 	"resources": [
 		{
@@ -190,14 +191,15 @@
 		{
 			"type": "Microsoft.Network/publicIPAddresses",
 			"apiVersion": "2020-08-01",
-			"name": "[concat(variables('publicIPAddressName'), copyIndex(1))]",
-			"copy": {
-				"name": "publicIPcopy",
-				"count": "[variables('linuxVMCount')]"
-			},
+			"name": "[variables('publicIPAddressName')]",
 			"location": "[variables('location')]",
 			"properties": {
-				"publicIPAllocationMethod": "Dynamic"
+				"publicIPAllocationMethod": "Dynamic",
+				"publicIPAddressVersion": "IPv4",
+				"dnsSettings": {
+					"domainNameLabel": "[variables('dnsLabelPrefix')]"
+				},
+				"idleTimeoutInMinutes": 4
 			}
 		},
 		{
@@ -206,7 +208,21 @@
 			"name": "[variables('networkSecurityGroupName')]",
 			"location": "[variables('location')]",
 			"properties": {
-				"securityRules": []
+				"securityRules": [
+					{
+						"name": "AllowInboundAccess",
+						"properties": {
+							"priority": 1000,
+							"access": "Allow",
+							"direction": "Inbound",
+							"destinationPortRange": "22",
+							"protocol": "Tcp",
+							"sourceAddressPrefix": "*",
+							"sourcePortRange": "*",
+							"destinationAddressPrefix": "*"
+						}
+					}
+				]
 			}
 		},
 		{
