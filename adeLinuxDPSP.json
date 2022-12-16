@@ -35,16 +35,16 @@
 				"description": "Client ID of AAD app which has permissions to KeyVault"
 			}
 		},
-		"aadOjectID": {
-			"type": "string",
-			"metadata": {
-				"description": "Service principal Object ID. Get-AzADServicePrincipal -DisplayName <AAD app name>"
-			}
-		},
 		"aadClientSecret": {
 			"type": "securestring",
 			"metadata": {
 				"description": "Client Secret of AAD app which has permissions to KeyVault"
+			}
+		},
+		"aadOjectID": {
+			"type": "string",
+			"metadata": {
+				"description": "Service principal Object ID. Get-AzADServicePrincipal -DisplayName <AAD app name>"
 			}
 		}
 	},
