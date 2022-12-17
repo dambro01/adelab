@@ -35,16 +35,16 @@
 				"description": "Client ID of AAD app which has permissions to KeyVault"
 			}
 		},
-		"aadOjectID": {
-			"type": "string",
-			"metadata": {
-				"description": "Object ID of AAD app - Get-AzADServicePrincipal -DisplayName <AAD user>"
-			}
-		},
 		"aadClientSecret": {
 			"type": "securestring",
 			"metadata": {
 				"description": "Client Secret of AAD app which has permissions to KeyVault"
+			}
+		},
+		"aadOjectID": {
+			"type": "string",
+			"metadata": {
+				"description": "Object ID of AAD app - Get-AzADServicePrincipal -DisplayName <AAD user>"
 			}
 		}
 	},
@@ -205,7 +205,21 @@
 			"name": "[variables('networkSecurityGroupName')]",
 			"location": "[variables('location')]",
 			"properties": {
-				"securityRules": []
+				"securityRules": [
+					{
+						"name": "AllowInboundAccess",
+						"properties": {
+							"priority": 1000,
+							"access": "Allow",
+							"direction": "Inbound",
+							"destinationPortRange": "3389",
+							"protocol": "Tcp",
+							"sourceAddressPrefix": "*",
+							"sourcePortRange": "*",
+							"destinationAddressPrefix": "*"
+						}
+					}
+				]
 			}
 		},
 		{
