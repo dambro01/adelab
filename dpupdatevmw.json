@@ -4,7 +4,7 @@
   "parameters": {
     "vmName": {
       "type": "string",
-      "defaultValue": "adeWindows",
+      "defaultValue": "adeLinux",
       "metadata": {
         "description": "Name of the Virtual Machine"
       }
