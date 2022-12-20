@@ -2,7 +2,7 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "metadata": {
-    "description": "Deploys ADE environment 1 Key vault, 2 Linux VMs, 2 Windows VMs",
+    "description": "Deploys ADE environment 1 Key vault, 2 Linux VMs (Single & Dual Pass), 2 Windows VMs (Single & Dual Pass)",
     "author": "Didier Ambroise",
     "GitHub": "https://github.com/dambro01/adelab",
     "Enablement": "https://learn.microsoft.com/en-us/troubleshoot/azure/virtual-machines/welcome-virtual-machines",
@@ -176,7 +176,10 @@
               "priority": 1000,
               "access": "Allow",
               "direction": "Inbound",
-              "destinationPortRange": "22",
+							"destinationPortRanges": [
+								"3389",
+								"22"
+							],
               "protocol": "Tcp",
               "sourceAddressPrefix": "*",
               "sourcePortRange": "*",
