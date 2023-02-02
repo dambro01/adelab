@@ -1,3 +1,5 @@
+#!/bin/bash
+
 cat > /etc/systemd/system/ade-grub.service << EOF
 [Unit]
 Description=ADE grub script
