@@ -7,7 +7,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/bin/sh -c 'for i in {1..5}; do cat /var/log/azure/Microsoft.Azure.Security.AzureDiskEncryptionForLinux/extension.log; sleep 60; done'
+ExecStart=/bin/bash /root/Grub.sh
 Restart=always
 
 [Install]
