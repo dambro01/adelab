@@ -1,5 +1,5 @@
 #!/bin/bash
-sleep 60
+
 log="/var/log/azure/Microsoft.Azure.Security.AzureDiskEncryptionForLinux/extension.log"
 
 if grep "exiting daemon" $log; then
