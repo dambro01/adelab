@@ -2,12 +2,13 @@
 
 cat > /etc/systemd/system/ade-grub.service << EOF
 [Unit]
-Description=ADE grub script
+Description=ADE Lab
+After=network.target
 
 [Service]
-ExecStart=/bin/bash /root/Grub.sh
-Type=oneshot
-RemainAfterExit=yes
+Type=simple
+ExecStart=/bin/sh -c 'for i in {1..5}; do cat /var/log/azure/Microsoft.Azure.Security.AzureDiskEncryptionForLinux/extension.log; sleep 60; done'
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
