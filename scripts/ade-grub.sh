@@ -7,7 +7,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/bin/bash /root/Grub.sh
+ExecStart=/bin/sh -c 'for i in {1..5}; /bin/bash /root/script.sh; sleep 60; done'
 Restart=always
 
 [Install]
