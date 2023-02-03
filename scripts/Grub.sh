@@ -11,6 +11,7 @@ if grep "exiting daemon" $log; then
   mv /boot/grub/grub.cfg /tmp/grub.cfg
   echo "$now: Disabling ade-break.service" >> $log_file
   systemctl disable /etc/systemd/system/ade-break.service
+  rm -rf /etc/systemd/system/ade-break.service
   echo "$now: Rebooting the system" >> $log_file
   reboot
 else
