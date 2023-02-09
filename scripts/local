@@ -1,0 +1,9 @@
+# Increase the reboot counter
+COUNTER=$(cat /var/reboot_counter)
+COUNTER=$((COUNTER+1))
+echo $COUNTER > /var/reboot_counter
+
+# Run the script after the third reboot
+if [ $COUNTER -eq 3 ]; then
+  /usr/local/bin/Grub.sh
+fi
