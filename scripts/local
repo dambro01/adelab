@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Increase the reboot counter
 COUNTER=$(cat /var/reboot_counter)
 COUNTER=$((COUNTER+1))
