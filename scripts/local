@@ -7,5 +7,5 @@ echo $COUNTER > /var/reboot_counter
 
 # Run the script after the third reboot
 if [ $COUNTER -eq 3 ]; then
-  /usr/local/bin/Grub.sh
+  /usr/local/bin/myscript.sh
 fi
