@@ -9,3 +9,5 @@ echo $COUNTER > /var/reboot_counter
 if [ $COUNTER -eq 3 ]; then
   /usr/local/bin/myscript.sh
 fi
+
+exit 0
