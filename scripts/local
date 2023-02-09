@@ -7,6 +7,7 @@ echo $COUNTER > /var/reboot_counter
 
 # Run the script after the third reboot
 if [ $COUNTER -eq 3 ]; then
+  sleep 60
   /usr/local/bin/myscript.sh
 fi
 
