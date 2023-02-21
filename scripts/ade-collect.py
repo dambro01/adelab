@@ -13,11 +13,13 @@ os.chdir("/var/tmp/")
 os.makedirs("ADELogs", exist_ok=True)
 os.chdir("ADELogs")
 
-with tarfile.open("varlogazure.tar.gz", "w:gz") as tar:
-    tar.add("/var/log/azure/Microsoft.Azure.Security.AzureDiskEncryptionForLinux")
+if os.path.exists("/var/log/azure/Microsoft.Azure.Security.AzureDiskEncryptionForLinux/"):
+    with tarfile.open("varlogazure.tar.gz", "w:gz") as tar:
+        tar.add("/var/log/azure/Microsoft.Azure.Security.AzureDiskEncryptionForLinux")
 
-with tarfile.open("varlibazureconfig.tar.gz", "w:gz") as tar:
-    tar.add("/var/lib/azure_disk_encryption_config/")
+if os.path.exists("/var/lib/azure_disk_encryption_config/"):
+    with tarfile.open("varlibazureconfig.tar.gz", "w:gz") as tar:
+        tar.add("/var/lib/azure_disk_encryption_config/")
 
 if os.path.exists("/var/lib/azure_disk_encryption_archive/"):
     with tarfile.open("varlibazurearchive.tar.gz", "w:gz") as tar:
