@@ -3,6 +3,7 @@
 import os
 import sys
 import tarfile
+import subprocess
 
 if os.geteuid() != 0:
     print("Please run as root")
@@ -52,8 +53,8 @@ with open("os_version.out", "w") as f:
     f.write(os.popen("cat /proc/version").read())
 
 with open("network_checks.out", "w") as f:
-    f.write(os.popen("nc -vz 169.254.169.254 80").read())
-    f.write(os.popen("nc -vz 168.63.129.16 80").read())
+    subprocess.run(["nc", "-vz", "169.254.169.254", "80"], stdout=f, stderr=f)
+    subprocess.run(["nc", "-vz", "168.63.129.16", "80"], stdout=f, stderr=f)
 
 with open("python.out", "w") as f:
     f.write(os.popen("ls -l /usr/bin/python*").read())
