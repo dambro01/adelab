@@ -4,6 +4,7 @@ import os
 import sys
 import tarfile
 import subprocess
+import time
 
 if os.geteuid() != 0:
     print("Please run as root")
@@ -66,5 +67,6 @@ os.system("cp /etc/crypttab .")
 os.system("cp /var/log/waagent.log .")
 
 os.chdir("..")
-with tarfile.open("ADELogs.tar.gz", "w:gz") as tar:
+current_time = time.strftime("%Y%m%d")
+with tarfile.open("ADELogs-"+current_time + ".tar.gz", "w:gz") as tar:
     tar.add("ADELogs")
