@@ -6,7 +6,7 @@
 		"author": "Didier Ambroise",
 		"GitHub": "https://github.com/dambro01/adelab",
 		"Enablement": "https://learn.microsoft.com/en-us/troubleshoot/azure/virtual-machines/welcome-virtual-machines",
-		"deploymentLink": "https://labbox.azurewebsites.net/api/Labbox?url=https://raw.githubusercontent.com/dambro01/adelab/main/adeLinuxSP.json"
+		"deploymentLink": "https://labbox.azurewebsites.net/api/Labbox?url=https://raw.githubusercontent.com/dambro01/adelab/main/adeLinuxSPgrub.json"
 	},
 	"parameters": {
 		"adminUsername": {
