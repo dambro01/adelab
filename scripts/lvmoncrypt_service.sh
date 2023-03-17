@@ -6,7 +6,7 @@ Description=ADE Lab
 After=network.target
 
 [Service]
-TimeoutStartSec=300s
+TimeoutStartSec=600s
 Type=oneshot
 ExecStart=/bin/bash /usr/local/bin/lvmoncrypt_post.sh
 
