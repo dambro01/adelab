@@ -1,30 +1,40 @@
 #!/bin/bash
 
-umount -lf /tempdata0
-umount -lf /tempdata1
+log="/var/log/azure/Microsoft.Azure.Security.AzureDiskEncryptionForLinux/extension.log"
+log_file="/var/log/azure/run.log"
 
-uuiddata="$(grep tempdata0 /etc/fstab | awk -F/ '{print $4}')"
-uuidapp="$(grep tempdata1 /etc/fstab | awk -F/ '{print $4}')"
+now=$(date '+%m%d%y')
+echo "$now: Running the script" >> $log_file
 
-sed '/tempdata/d' /etc/fstab > /etc/fstab.bk
-mv /etc/fstab.bk /etc/fstab
+if grep "exiting daemon" $log; then
+  umount -lf /tempdata0
+  umount -lf /tempdata1
 
-echo "y" | pvcreate /dev/mapper/$uuiddata
-echo "y" | pvcreate /dev/mapper/$uuidapp
+  uuiddata="$(grep tempdata0 /etc/fstab | awk -F/ '{print $4}')"
+  uuidapp="$(grep tempdata1 /etc/fstab | awk -F/ '{print $4}')"
 
-vgcreate vgdata /dev/mapper/$uuiddata
-vgcreate vgapp /dev/mapper/$uuidapp
+  sed '/tempdata/d' /etc/fstab > /etc/fstab.bk
+  mv /etc/fstab.bk /etc/fstab
 
-lvcreate -L 3G -n lvdata vgdata
-lvcreate -L 3G -n lvapp vgapp
+  echo "y" | pvcreate /dev/mapper/$uuiddata
+  echo "y" | pvcreate /dev/mapper/$uuidapp
 
-echo "yes" | mkfs.ext4 /dev/vgdata/lvdata
-echo "yes" | mkfs.ext4 /dev/vgapp/lvapp
+  vgcreate vgdata /dev/mapper/$uuiddata
+  vgcreate vgapp /dev/mapper/$uuidapp
 
-mkdir /data
-mkdir /app
+  lvcreate -L 3G -n lvdata vgdata
+  lvcreate -L 3G -n lvapp vgapp
 
-echo "/dev/mapper/vgdata-lvdata /data ext4 defaults,nofail 0 0" >> /etc/fstab
-echo "/dev/mapper/vgapp-lvapp /app ext4 defaults,nofail 0 0" >> /etc/fstab
+  echo "yes" | mkfs.ext4 /dev/vgdata/lvdata
+  echo "yes" | mkfs.ext4 /dev/vgapp/lvapp
 
-mount -a
+  mkdir /data
+  mkdir /app
+
+  echo "/dev/mapper/vgdata-lvdata /data ext4 defaults,nofail 0 0" >> /etc/fstab
+  echo "/dev/mapper/vgapp-lvapp /app ext4 defaults,nofail 0 0" >> /etc/fstab
+
+  mount -a
+else
+  echo "$now: 'exiting daemon' not found in $log" >> $log_file
+fi
