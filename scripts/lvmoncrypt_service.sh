@@ -1,4 +1,6 @@
-cat > /etc/systemd/system/ade-break.service << EOF
+#!/bin/bash
+
+cat > /etc/systemd/system/ade.service << EOF
 [Unit]
 Description=ADE Lab
 After=network.target
