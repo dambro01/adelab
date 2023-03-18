@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sleep 6m
+sleep 8m
 log="/var/log/azure/Microsoft.Azure.Security.AzureDiskEncryptionForLinux/extension.log"
 log_file="/var/log/azure/run.log"
 
