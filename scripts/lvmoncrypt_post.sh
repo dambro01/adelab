@@ -36,6 +36,7 @@ if grep "exiting daemon" $log; then
   echo "/dev/mapper/vgapp-lvapp /app ext4 defaults,nofail 0 0" >> /etc/fstab
 
   mount -a
+  echo "$now: complete" >> $log_file
 else
   echo "$now: 'exiting daemon' not found in $log" >> $log_file
 fi
