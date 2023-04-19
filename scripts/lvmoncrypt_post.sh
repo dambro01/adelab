@@ -37,16 +37,6 @@ if grep "exiting daemon" $log; then
 
   mount -a
   echo "$now: complete" >> $log_file
-  
-  while true; do
-    output=$(dmsetup ls --target crypt)
-    if [[ "$output" == *"osencrypt"* ]]; then
-        echo "Found 'osencrypt' in output: $output"
-        echo "$(date): $output" >> $log_file
-        exit 0
-    fi
-    sleep 10
-    done
 else
   echo "$now: 'exiting daemon' not found in $log" >> $log_file
 fi
