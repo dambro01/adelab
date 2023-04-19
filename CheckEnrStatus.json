@@ -286,7 +286,7 @@
     {
       "apiVersion": "2022-02-01",
       "name": "EncryptionStatus",
-      "type": "Microsoft.Compute/virtualMachines/runCommand",
+      "type": "Microsoft.Compute/virtualMachines/runCommands",
       "location": "[resourceGroup().location]",
       "dependsOn": [
         "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]",
