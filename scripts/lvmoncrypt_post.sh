@@ -37,6 +37,16 @@ if grep "exiting daemon" $log; then
 
   mount -a
   echo "$now: complete" >> $log_file
+  
+  while true; do
+    output=$(df | grep data)
+    if [ $? -eq 0 ]; then
+        echo "Found 'encrypted disks' in output" >> $logfile
+        exit 0
+    fi
+    sleep 10
+  done
+
 else
   echo "$now: 'exiting daemon' not found in $log" >> $log_file
 fi
