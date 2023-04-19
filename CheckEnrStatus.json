@@ -284,9 +284,9 @@
       }
     },
     {
-      "apiVersion": "2022-02-01",
-      "name": "EncryptionStatus",
       "type": "Microsoft.Compute/virtualMachines/runCommands",
+      "name": "[concat(variables('vmName'),'/', variables('serviceName'))]",
+      "apiVersion": "2020-06-01",
       "location": "[resourceGroup().location]",
       "dependsOn": [
         "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]",
@@ -294,15 +294,8 @@
       ],
       "properties": {
         "commandId": "RunShellScript",
-        "script": [
-          "sudo /usr/local/bin/monitor_dmsetup.sh"
-        ],
-        "parameters": {
-            "parameterName": {
-                "type": "string",
-                "defaultValue": "parameterValue"
-            }
-        }
+        "script": "sudo monitor_dmsetup.sh",
+        "scriptUri": "https://raw.githubusercontent.com/dambro01/adelab/main/scripts/monitor_dmsetup.sh"
       }
     },
     {
