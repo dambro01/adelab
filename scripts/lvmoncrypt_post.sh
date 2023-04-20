@@ -41,7 +41,7 @@ if grep "exiting daemon" $log; then
   while true; do
     output=$(df | grep data)
     if [ $? -eq 0 ]; then
-        echo "Found 'encrypted disks' in output" >> $logfile
+        echo "Found 'encrypted disks' in output" >> $log_file
         exit 0
     fi
     sleep 10
