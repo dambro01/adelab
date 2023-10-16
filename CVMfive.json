@@ -1,0 +1,407 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Deploys 1 Ubuntu Confidential VM.",
+    "author": "Didier Ambroise",
+    "Enablement": "https://learn.microsoft.com/en-us/troubleshoot/azure/virtual-machines/welcome-virtual-machines",
+    "deploymentLink": "https://labbox.azurewebsites.net/api/Labbox?url=https://supportability.visualstudio.com/AzureIaaSVM/_git/Labbox?path=/SME/Linux/CVM.json"
+  },
+  "parameters": {
+    "adminUsername": {
+      "type": "string",
+      "maxLength": 20,
+      "metadata": {
+        "description": "Username for the Virtual Machines."
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "minLength": 12,
+      "metadata": {
+        "description": "Password for the Virtual Machines."
+      }
+    },
+    "yourPublicIP": {
+      "type": "string",
+      "defaultValue": "*",
+      "metadata": {
+        "description": "Specify your IP to allow connectivity to the VM from the NSG. Do a quick search for 'my ip' and enter your IP here. This will be placed in your NSG to allow access to the labs. If left as the default value '*', the NSG will use * for the IP address. This is not recommended as CSS policy will automatically remove this rule within a few minutes for security purposes and your LabBox will then require JIT or a new rule with your IP address specified."
+      }
+    },
+    "objectId": {
+      "type": "string",
+      "metadata": {
+        "description": "Specifies your object ID. Get it by using Get-AzADUser -SignedIn PowerShell cmdlet."
+      }
+    }
+  },
+  "variables": {
+    "vmName": "CVM",
+    "nicName": "myVMNic",
+    "addressPrefix": "10.0.0.0/16",
+    "subnetName": "Subnet",
+    "subnetPrefix": "10.0.0.0/24",
+    "subnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]",
+    "virtualNetworkName": "myVNET",
+    "publicIPAddressName": "myPublicIP",
+    "networkSecurityGroupName": "default-NSG",
+    "storageAccountType": "Standard_LRS",
+    "location": "[resourceGroup().location]",
+    "storageUri": "[format('store{0}', uniqueString(resourceGroup().id))]",
+    "dnsLabelPrefix": "[toLower(concat('adecvm-', uniqueString(resourceGroup().id)))]",
+    "keyName": "[concat('key-os-', uniqueString(resourceGroup().id))]",
+    "diskencsetName": "[concat('des-', uniqueString(resourceGroup().id))]",
+    "vaultName": "[concat('kv-', uniqueString(resourceGroup().id))]",
+    "serviceName": "setup",
+    "userIdentity": "[tolower(concat('mi-', uniquestring(resourceGroup().id)))]",
+    "bootstrapRoleAssignmentId": "[guid(concat(resourceGroup().id, 'contributor'))]",
+    "contributorRoleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2023-02-01",
+      "name": "[variables('vaultName')]",
+      "location": "[variables('location')]",
+      "properties": {
+        "enabledForDeployment": true,
+        "enabledForDiskEncryption": true,
+        "enabledForTemplateDeployment": true,
+        "enableSoftDelete": true,
+        "softDeleteRetentionInDays": 7,
+        "enablePurgeProtection": true,
+        "tenantId": "[subscription().tenantId]",
+        "accessPolicies": [
+          {
+            "objectId": "[parameters('objectId')]",
+            "tenantId": "[subscription().tenantId]",
+            "permissions": {
+              "keys": [
+                "Get",
+                "List",
+                "Update",
+                "Create",
+                "Import",
+                "Delete",
+                "Recover",
+                "Backup",
+                "Restore",
+                "Decrypt",
+                "Encrypt",
+                "UnwrapKey",
+                "WrapKey",
+                "Verify",
+                "Sign",
+                "Release",
+                "Rotate",
+                "getrotationpolicy",
+                "setrotationpolicy"
+
+              ],
+              "secrets": [],
+              "certificates": []
+            }
+          }
+        ],
+        "sku": {
+          "name": "Premium",
+          "family": "A"
+        },
+        "networkAcls": {
+          "defaultAction": "Allow",
+          "bypass": "AzureServices"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/accessPolicies",
+      "apiVersion": "2023-02-01",
+      "name": "[concat(variables('vaultName'), '/add')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/diskEncryptionSets', variables('diskencsetName'))]"
+      ],
+      "properties": {
+        "accessPolicies": [
+          {
+            "objectId": "cbab42ea-0ee6-4563-a646-7418ac305278",
+            "tenantId": "[subscription().tenantId]",
+            "permissions": {
+              "keys": [
+                "Get",
+                "Release"
+              ],
+              "secrets": [],
+              "certificates": []
+            }
+          },
+          {
+            "objectId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('userIdentity')), '2018-11-30').principalId]",
+            "tenantId": "[subscription().tenantId]",
+            "permissions": {
+              "keys": [
+                "Get",
+                "Release"
+              ],
+              "secrets": [],
+              "certificates": []
+            }
+          },
+          {
+            "objectId": "[reference(resourceId('Microsoft.Compute/diskEncryptionSets', variables('diskencsetName')), '2019-07-01', 'Full').identity.PrincipalId]",
+            "tenantId": "[subscription().tenantId]",
+            "permissions": {
+              "keys": [
+                "Get",
+                "List",
+                "UnwrapKey",
+                "WrapKey"
+              ],
+              "secrets": [],
+              "certificates": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/keys",
+      "apiVersion": "2021-11-01-preview",
+      "name": "[concat(variables('vaultName'), '/', variables('keyName'))]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('vaultName'))]"
+      ],
+      "properties": {
+        "kty": "RSA-HSM",
+        "keySize": 4096
+      }
+    },
+    {
+      "type": "Microsoft.Compute/diskEncryptionSets",
+      "apiVersion": "2019-07-01",
+      "name": "[variables('diskencsetName')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults/keys', variables('vaultName'), variables('keyName'))]"
+      ],
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "activeKey": {
+          "sourceVault": {
+            "id": "[resourceId('Microsoft.KeyVault/vaults', variables('vaultName'))]"
+          },
+          "keyUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/keys', variables('vaultName'), variables('keyName')), '2019-09-01', 'Full').properties.keyUriWithVersion]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2020-08-01",
+      "name": "[variables('publicIPAddressName')]",
+      "location": "[variables('location')]",
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic",
+        "publicIPAddressVersion": "IPv4",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('dnsLabelPrefix')]"
+        },
+        "idleTimeoutInMinutes": 4
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2020-08-01",
+      "name": "[variables('networkSecurityGroupName')]",
+      "location": "[variables('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "AllowInboundAccess",
+            "properties": {
+              "priority": 1001,
+              "access": "Allow",
+              "direction": "Inbound",
+              "destinationPortRange": "22",
+              "protocol": "Tcp",
+              "sourceAddressPrefix": "[parameters('yourPublicIP')]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2020-08-01",
+      "name": "[variables('virtualNetworkName')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+      ],
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [ "[variables('addressPrefix')]" ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('subnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('subnetPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2020-08-01",
+      "name": "[variables('nicName')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[variables('publicIPAddressName')]",
+        "[variables('virtualNetworkName')]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]"
+              },
+              "subnet": {
+                "id": "[variables('subnetRef')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2021-06-01",
+      "name": "[variables('storageUri')]",
+      "location": "[variables('location')]",
+      "sku": {
+        "name": "[variables('storageAccountType')]"
+      },
+      "kind": "StorageV2",
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2022-03-01",
+      "name": "[variables('vmName')]",
+      "location": "[variables('location')]",
+      "dependsOn": [ "[variables('nicName')]" ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_DC2ads_v5"
+        },
+        "storageProfile": {
+          "osDisk": {
+            "osType": "Linux",
+            "createOption": "fromImage",
+            "caching": "ReadWrite",
+            "writeAcceleratorEnabled": false,
+            "managedDisk": {
+              "storageAccountType": "StandardSSD_LRS",
+              "securityProfile": {
+                "securityEncryptionType": "DiskWithVMGuestState"
+              }
+            },
+            "deleteOption": "Delete"
+          },
+          "dataDisks": [
+            {
+              "diskSizeGB": 4,
+              "lun": 0,
+              "createOption": "Empty"
+            }
+          ],
+          "imageReference": {
+            "publisher": "canonical",
+            "offer": "0001-com-ubuntu-confidential-vm-jammy",
+            "sku": "22_04-lts-cvm",
+            "version": "latest"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]",
+              "properties": {
+                "deleteOption": "Delete"
+              }
+            }
+          ]
+        },
+        "osProfile": {
+          "computerName": "[variables('vmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "linuxConfiguration": {
+            "patchSettings": {
+              "patchMode": "ImageDefault"
+            }
+          }
+        },
+        "securityProfile": {
+          "securityType": "ConfidentialVM",
+          "uefiSettings": {
+            "secureBootEnabled": true,
+            "vTpmEnabled": true
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "name": "[variables('userIdentity')]",
+      "apiVersion": "2018-11-30",
+      "location": "[variables('location')]"
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2018-09-01-preview",
+      "name": "[variables('bootstrapRoleAssignmentId')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('userIdentity'))]"
+      ],
+      "properties": {
+        "roleDefinitionId": "[variables('contributorRoleDefinitionId')]",
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('userIdentity')), '2018-11-30').principalId]",
+        "principalType": "ServicePrincipal"
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(variables('vmName'),'/', variables('serviceName'))]",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2019-03-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]"
+      ],
+      "properties": {
+        "publisher": "Microsoft.Azure.Extensions",
+        "type": "CustomScript",
+        "typeHandlerVersion": "2.1",
+        "autoUpgradeMinorVersion": true,
+        "protectedSettings": {
+          "commandToExecute": "bash LinuxDataEXT4.sh",
+          "fileUris": [
+            "https://raw.githubusercontent.com/dambro01/adelab/main/scripts/LinuxDataEXT4.sh"
+          ]
+        }
+      }
+    }
+  ]
+}
