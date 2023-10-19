@@ -1,0 +1,534 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "metadata": {
+        "description": "Deploy a new encrypted 2019 Windows VM and back it up.",
+        "author": "Didier Ambroise, Ryan McCallum",
+        "alias": "diambroi",
+        "Enablement": "https://learn.microsoft.com/en-us/azure/backup/quick-backup-vm-template",
+        "deploymentLinkInternal": "https://labbox.azurewebsites.net/api/Labbox?url=https://supportability.visualstudio.com/AzureIaaSVM/_git/Labbox?path=/SME/Encryption/adeWinABRS.json"
+    },
+    "parameters": {
+        "adminUsername": {
+            "type": "String",
+            "maxLength": 20,
+            "metadata": {
+                "description": "Username for the Virtual Machine."
+            }
+        },
+        "adminPassword": {
+            "type": "SecureString",
+            "minLength": 12,
+            "metadata": {
+                "description": "Password for the Virtual Machine."
+            }
+        },
+        "yourPublicIP": {
+            "type": "string",
+            "defaultValue": "*",
+            "metadata": {
+                "description": "Specify your IP to allow connectivity to the VM from the NSG. Do a quick search for 'my ip' and enter your IP here. This will be placed in your NSG to allow access to the labs. If left as the default value '*', the NSG will use * for the IP address. This is not recommended as CSS policy will automatically remove this rule within a few minutes for security purposes and your LabBox will then require JIT or a new rule with your IP address specified."
+            }
+        },
+        "utcValue": {
+            "defaultValue": "[utcNow()]",
+            "type": "string",
+            "metadata": {
+                "description": "UTC"
+            }
+        },
+        "objectId": {
+            "type": "string",
+            "metadata": {
+                "description": "Specifies your object ID. Get it by using Get-AzADUser -SignedIn cmdlet."
+            }
+        },
+        "aadClientID": {
+            "type": "string",
+            "metadata": {
+                "description": "Client ID of AAD app which has permissions to KeyVault"
+            }
+        },
+        "aadOjectID": {
+            "type": "string",
+            "metadata": {
+                "description": "Object ID of AAD app which has permissions to KeyVault"
+            }
+        },
+        "aadClientSecret": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Client Secret of AAD app which has permissions to KeyVault"
+            }
+        }
+    },
+    "variables": {
+        "vmName": "adeWinDPABRS",
+        "nicName": "myVMNic",
+        "storageAccountType": "Standard_LRS",
+        "location": "[resourceGroup().location]",
+        "storageUri": "[format('store{0}', uniqueString(resourceGroup().id))]",
+        "addressPrefix": "10.0.0.0/16",
+        "subnetName": "Subnet",
+        "subnetPrefix": "10.0.0.0/24",
+        "subnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]",
+        "projectName": "[uniqueString(resourceGroup().id)]",
+        "vmSize": "Standard_B2ms",
+        "dpupdatevm": "updatevm",
+        "virtualNetworkName": "MyVNET",
+        "publicIPAddressName": "myPublicIP",
+        "networkSecurityGroupName": "default-NSG",
+        "vaultName": "[format('{0}-vault', variables('projectName'))]",
+        "backupFabric": "Azure",
+        "backupPolicyName": "DefaultPolicy",
+        "protectionContainer": "[format('iaasvmcontainer;iaasvmcontainerv2;{0};{1}', resourceGroup().name, variables('vmName'))]",
+        "protectedItem": "[format('vm;iaasvmcontainerv2;{0};{1}', resourceGroup().name, variables('vmName'))]",
+        "userIdentity": "[tolower(concat('ui-', uniquestring(resourceGroup().id)))]",
+        "bootstrapRoleAssignmentId": "[guid(concat(resourceGroup().id, 'contributor'))]",
+        "contributorRoleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+        "encryptionOperation": "EnableEncryption",
+        "KeyEncryptionAlgorithm": "RSA-OAEP",
+        "KeyVaultURL": "[concat('https://', variables('kvvaultName'), '.vault.azure.net/')]",
+        "KeyVaultResourceId": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.KeyVault/vaults/', variables('kvvaultName'))]",
+        "VolumeType": "OS",
+        "extensionName": "AzureDiskEncryption",
+        "kvvaultName": "[concat('keyvault-', uniqueString(resourceGroup().id))]",
+        "keyName": "[concat('key-', uniqueString(resourceGroup().id))]",
+        "SequenceVersion": "051ff53f-1837-45e1-a013-5521c52b665c",
+        "extensionVersion": "1.1",
+        "updateVmUrl": "https://raw.githubusercontent.com/dambro01/adelab/main/dpupdatevm.json"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.KeyVault/vaults",
+            "apiVersion": "2019-09-01",
+            "name": "[variables('kvvaultName')]",
+            "location": "[variables('location')]",
+            "properties": {
+                "enabledForDeployment": "[true()]",
+                "enabledForDiskEncryption": "[true()]",
+                "enabledForTemplateDeployment": "[true()]",
+                "enableSoftDelete": "[true()]",
+                "softDeleteRetentionInDays": 7,
+                "enablePurgeProtection": "[true()]",
+                "tenantId": "[subscription().tenantId]",
+                "accessPolicies": [
+                    {
+                        "objectId": "[parameters('objectId')]",
+                        "tenantId": "[subscription().tenantId]",
+                        "permissions": {
+                            "keys": [
+                                "Get",
+                                "List",
+                                "Update",
+                                "Create",
+                                "Import",
+                                "Delete",
+                                "Recover",
+                                "Backup",
+                                "Restore",
+                                "Decrypt",
+                                "Encrypt",
+                                "UnwrapKey",
+                                "WrapKey",
+                                "Verify",
+                                "Sign",
+                                "Purge"
+                            ],
+                            "secrets": [
+                                "Get",
+                                "List",
+                                "Set",
+                                "Delete",
+                                "Recover",
+                                "Backup",
+                                "Restore",
+                                "Purge"
+                            ],
+                            "certificates": [
+                                "Get",
+                                "List",
+                                "Update",
+                                "Create",
+                                "Import",
+                                "Delete",
+                                "Recover",
+                                "Backup",
+                                "Restore",
+                                "ManageContacts",
+                                "ManageIssuers",
+                                "GetIssuers",
+                                "ListIssuers",
+                                "SetIssuers",
+                                "DeleteIssuers",
+                                "Purge"
+                            ]
+                        }
+                    },
+                    {
+                        "objectId": "[parameters('aadOjectID')]",
+                        "tenantId": "[subscription().tenantId]",
+                        "permissions": {
+                            "keys": [
+                                "Get",
+                                "List",
+                                "Update",
+                                "Create",
+                                "Import",
+                                "Delete",
+                                "Recover",
+                                "Backup",
+                                "Restore",
+                                "Decrypt",
+                                "Encrypt",
+                                "UnwrapKey",
+                                "WrapKey",
+                                "Verify",
+                                "Sign",
+                                "Purge"
+                            ],
+                            "secrets": [
+                                "Get",
+                                "List",
+                                "Set",
+                                "Delete",
+                                "Recover",
+                                "Backup",
+                                "Restore",
+                                "Purge"
+                            ],
+                            "certificates": [
+                                "Get",
+                                "List",
+                                "Update",
+                                "Create",
+                                "Import",
+                                "Delete",
+                                "Recover",
+                                "Backup",
+                                "Restore",
+                                "ManageContacts",
+                                "ManageIssuers",
+                                "GetIssuers",
+                                "ListIssuers",
+                                "SetIssuers",
+                                "DeleteIssuers",
+                                "Purge"
+                            ]
+                        }
+                    },
+                    {
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "f40e18f0-6544-45c2-9d24-639a8bb3b41a",
+                        "permissions": {
+                            "certificates": [],
+                            "keys": [
+                                "Get",
+                                "List",
+                                "Backup"
+                            ],
+                            "secrets": [
+                                "Get",
+                                "List",
+                                "Backup"
+                            ]
+                        }
+                    }
+                ],
+                "sku": {
+                    "name": "Standard",
+                    "family": "A"
+                },
+                "networkAcls": {
+                    "defaultAction": "Allow",
+                    "bypass": "AzureServices"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.KeyVault/vaults/keys",
+            "apiVersion": "2021-10-01",
+            "name": "[concat(variables('kvvaultName'), '/', variables('keyName'))]",
+            "location": "[variables('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', variables('kvvaultName'))]"
+            ],
+            "properties": {
+                "kty": "RSA",
+                "keySize": 4096
+            }
+        },
+        {
+            "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+            "name": "[variables('userIdentity')]",
+            "apiVersion": "2018-11-30",
+            "location": "[variables('location')]"
+        },
+        {
+            "type": "Microsoft.Authorization/roleAssignments",
+            "apiVersion": "2018-09-01-preview",
+            "name": "[variables('bootstrapRoleAssignmentId')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('userIdentity'))]"
+            ],
+            "properties": {
+                "roleDefinitionId": "[variables('contributorRoleDefinitionId')]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('userIdentity')), '2018-11-30').principalId]",
+                "principalType": "ServicePrincipal"
+            }
+        },
+        {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2020-08-01",
+            "name": "[variables('publicIPAddressName')]",
+            "location": "[variables('location')]",
+            "properties": {
+                "publicIPAllocationMethod": "Dynamic"
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2020-08-01",
+            "name": "[variables('networkSecurityGroupName')]",
+            "location": "[variables('location')]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "AllowInboundAccess",
+                        "properties": {
+                            "priority": 1000,
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "destinationPortRange": "3389",
+                            "protocol": "Tcp",
+                            "sourceAddressPrefix": "[parameters('yourPublicIP')]",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2020-08-01",
+            "name": "[variables('virtualNetworkName')]",
+            "location": "[variables('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+            ],
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[variables('addressPrefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('subnetName')]",
+                        "properties": {
+                            "addressPrefix": "[variables('subnetPrefix')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2020-08-01",
+            "name": "[variables('nicName')]",
+            "location": "[variables('location')]",
+            "dependsOn": [
+                "[variables('publicIPAddressName')]",
+                "[variables('virtualNetworkName')]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]"
+                            },
+                            "subnet": {
+                                "id": "[variables('subnetRef')]"
+                            }
+                        }
+                    }
+                ],
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2021-06-01",
+            "name": "[variables('storageUri')]",
+            "location": "[variables('location')]",
+            "sku": {
+                "name": "[variables('storageAccountType')]"
+            },
+            "kind": "StorageV2",
+            "properties": {}
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2020-12-01",
+            "name": "[variables('vmName')]",
+            "location": "[variables('location')]",
+            "dependsOn": [
+                "[variables('nicName')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageUri'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[variables('vmSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[variables('vmName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "2016-Datacenter",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "createOption": "FromImage",
+                        "managedDisk": {
+                            "storageAccountType": "StandardSSD_LRS"
+                        }
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('nicName'))]"
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true,
+                        "storageUri": "[concat('https://', variables('storageUri'), '.blob.core.windows.net')]"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(variables('vmName'),'/', variables('extensionName'))]",
+            "apiVersion": "2016-04-30-preview",
+            "location": "[variables('location')]",
+            "dependsOn": [
+                "[concat(resourceId('Microsoft.Compute/virtualMachines/', variables('vmName')))]"
+            ],
+            "properties": {
+                "publisher": "Microsoft.Azure.Security",
+                "type": "AzureDiskEncryption",
+                "typeHandlerVersion": "[variables('extensionVersion')]",
+                "autoUpgradeMinorVersion": true,
+                "forceUpdateTag": "[variables('sequenceVersion')]",
+                "protectedSettings": {
+                    "AADClientSecret": "[parameters('aadClientSecret')]"
+                },
+                "settings": {
+                    "AADClientID": "[parameters('aadClientID')]",
+                    "AADClientCertThumbprint": "",
+                    "KeyVaultURL": "[variables('keyVaultURL')]",
+                    "KeyEncryptionAlgorithm": "[variables('keyEncryptionAlgorithm')]",
+                    "VolumeType": "[variables('volumeType')]",
+                    "EncryptionOperation": "[variables('encryptionOperation')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "name": "[variables('dpupdatevm')]",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines/extensions',  variables('vmName'), variables('extensionName'))]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('updateVmUrl')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "vmName": {
+                        "value": "[variables('vmName')]"
+                    },
+                    "keyVaultResourceID": {
+                        "value": "[variables('keyVaultResourceID')]"
+                    },
+                    "keyVaultSecretUrl": {
+                        "value": "[reference(resourceId('Microsoft.Compute/virtualMachines/extensions',  variables('vmName'), variables('extensionName'))).instanceView.statuses[0].message]"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.RecoveryServices/vaults",
+            "apiVersion": "2022-01-01",
+            "name": "[variables('vaultName')]",
+            "location": "[variables('location')]",
+            "sku": {
+                "name": "RS0",
+                "tier": "Standard"
+            },
+            "properties": {}
+        },
+        {
+            "type": "Microsoft.RecoveryServices/vaults/backupFabrics/protectionContainers/protectedItems",
+            "apiVersion": "2022-01-01",
+            "name": "[format('{0}/{1}/{2}/{3}', variables('vaultName'), variables('backupFabric'), variables('protectionContainer'), variables('protectedItem'))]",
+            "properties": {
+                "protectedItemType": "Microsoft.Compute/virtualMachines",
+                "policyId": "[format('{0}/backupPolicies/{1}', resourceId('Microsoft.RecoveryServices/vaults', variables('vaultName')), variables('backupPolicyName'))]",
+                "sourceResourceId": "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.RecoveryServices/vaults', variables('vaultName'))]",
+                "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Resources/deploymentScripts",
+            "apiVersion": "2020-10-01",
+            "name": "enableVMBackup",
+            "location": "[variables('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('userIdentity'))]",
+                "[variables('protectedItem')]",
+                "[resourceId('Microsoft.Compute/virtualMachines/extensions',  variables('vmName'), variables('extensionName'))]",
+                "[resourceId('Microsoft.Resources/deployments', variables('dpupdatevm'))]"
+            ],
+            "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                    "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('userIdentity')))]": {}
+                }
+            },
+            "kind": "AzurePowerShell",
+            "properties": {
+                "forceUpdateTag": "[parameters('utcValue')]",
+                "azPowerShellVersion": "9.0",
+                "timeout": "PT1H",
+                "arguments": "[format(' -rgName {0} -vmName {1} -subID {2} -vaultName {3}', resourceGroup().name, variables('vmName'), subscription().subscriptionId, variables('vaultName'))]",
+                "scriptContent": "param( [string] [Parameter(Mandatory=$true)] $rgName, [string] [Parameter(Mandatory=$true)] $vmName, [string] [Parameter(Mandatory=$true)] $subID, [string] [Parameter(Mandatory=$true)] $vaultName); $ErrorActionPreference = 'Stop'; Set-AzContext -Subscription $subID; Set-AzDefault -ResourceGroupName $rgName;  $vault = Get-azrecoveryservicesvault -Name $vaultName; Set-AzRecoveryServicesVaultContext -Vault $vault; $backupcontainer = Get-AzRecoveryServicesBackupContainer -ContainerType 'AzureVM' -FriendlyName $vmName -ResourceGroupName $rgName; $item = Get-AzRecoveryServicesBackupItem -Container $backupcontainer -WorkloadType 'AzureVM'; Backup-AzRecoveryServicesBackupItem -Item $item;",
+                "cleanupPreference": "OnSuccess",
+                "retentionInterval": "P1D"
+            }
+        }
+    ],
+    "outputs": {}
+}

@@ -5,7 +5,7 @@
     "description": "Deploys 1 Ubuntu Confidential VM.",
     "author": "Didier Ambroise",
     "Enablement": "https://learn.microsoft.com/en-us/troubleshoot/azure/virtual-machines/welcome-virtual-machines",
-    "deploymentLink": "https://labbox.azurewebsites.net/api/Labbox?url=https://supportability.visualstudio.com/AzureIaaSVM/_git/Labbox?path=/SME/Linux/CVM.json"
+    "deploymentLink": "https://labbox.azurewebsites.net/api/Labbox?url=https://supportability.visualstudio.com/AzureIaaSVM/_git/Labbox?path=/SME/Linux/cvmLinux.json"
   },
   "parameters": {
     "adminUsername": {
@@ -37,7 +37,7 @@
     }
   },
   "variables": {
-    "vmName": "CVM",
+    "vmName": "cvmLinux",
     "nicName": "myVMNic",
     "addressPrefix": "10.0.0.0/16",
     "subnetName": "Subnet",
@@ -64,6 +64,9 @@
       "apiVersion": "2023-02-01",
       "name": "[variables('vaultName')]",
       "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('userIdentity'))]"
+      ],
       "properties": {
         "enabledForDeployment": true,
         "enabledForDiskEncryption": true,
@@ -102,53 +105,9 @@
               "secrets": [],
               "certificates": []
             }
-          }
-        ],
-        "sku": {
-          "name": "Premium",
-          "family": "A"
-        },
-        "networkAcls": {
-          "defaultAction": "Allow",
-          "bypass": "AzureServices"
-        }
-      }
-    },
-    {
-      "type": "Microsoft.KeyVault/vaults/accessPolicies",
-      "apiVersion": "2023-02-01",
-      "name": "[concat(variables('vaultName'), '/add')]",
-      "dependsOn": [
-        "[resourceId('Microsoft.Compute/diskEncryptionSets', variables('diskencsetName'))]"
-      ],
-      "properties": {
-        "accessPolicies": [
-          {
-            "objectId": "cbab42ea-0ee6-4563-a646-7418ac305278",
-            "tenantId": "[subscription().tenantId]",
-            "permissions": {
-              "keys": [
-                "Get",
-                "Release"
-              ],
-              "secrets": [],
-              "certificates": []
-            }
           },
           {
             "objectId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('userIdentity')), '2018-11-30').principalId]",
-            "tenantId": "[subscription().tenantId]",
-            "permissions": {
-              "keys": [
-                "Get",
-                "Release"
-              ],
-              "secrets": [],
-              "certificates": []
-            }
-          },
-          {
-            "objectId": "[reference(resourceId('Microsoft.Compute/diskEncryptionSets', variables('diskencsetName')), '2019-07-01', 'Full').identity.PrincipalId]",
             "tenantId": "[subscription().tenantId]",
             "permissions": {
               "keys": [
@@ -160,8 +119,28 @@
               "secrets": [],
               "certificates": []
             }
+          },
+          {
+            "objectId": "cbab42ea-0ee6-4563-a646-7418ac305278",
+            "tenantId": "[subscription().tenantId]",
+            "permissions": {
+              "keys": [
+                "Get",
+                "Release"
+              ],
+              "secrets": [],
+              "certificates": []
+            }
           }
-        ]
+        ],
+        "sku": {
+          "name": "Premium",
+          "family": "A"
+        },
+        "networkAcls": {
+          "defaultAction": "Allow",
+          "bypass": "AzureServices"
+        }
       }
     },
     {
@@ -179,14 +158,18 @@
     },
     {
       "type": "Microsoft.Compute/diskEncryptionSets",
-      "apiVersion": "2019-07-01",
+      "apiVersion": "2023-01-02",
       "name": "[variables('diskencsetName')]",
       "location": "[variables('location')]",
       "dependsOn": [
-        "[resourceId('Microsoft.KeyVault/vaults/keys', variables('vaultName'), variables('keyName'))]"
+        "[resourceId('Microsoft.KeyVault/vaults/keys', variables('vaultName'), variables('keyName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('userIdentity'))]"
       ],
       "identity": {
-        "type": "SystemAssigned"
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/',resourceGroup().name, '/providers/Microsoft.ManagedIdentity/userAssignedIdentities', '/', variables('userIdentity'))]": {}
+        }
       },
       "properties": {
         "activeKey": {
@@ -194,7 +177,8 @@
             "id": "[resourceId('Microsoft.KeyVault/vaults', variables('vaultName'))]"
           },
           "keyUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/keys', variables('vaultName'), variables('keyName')), '2019-09-01', 'Full').properties.keyUriWithVersion]"
-        }
+        },
+        "encryptionType": "ConfidentialVmEncryptedWithCustomerKey"
       }
     },
     {
@@ -301,7 +285,17 @@
       "apiVersion": "2022-03-01",
       "name": "[variables('vmName')]",
       "location": "[variables('location')]",
-      "dependsOn": [ "[variables('nicName')]" ],
+      "dependsOn": [
+        "[variables('nicName')]",
+        "[resourceId('Microsoft.Compute/diskEncryptionSets', variables('diskencsetName'))]"
+
+      ],
+      "identity": {
+        "type": "SystemAssigned, UserAssigned",
+        "userAssignedIdentities": {
+          "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/',resourceGroup().name, '/providers/Microsoft.ManagedIdentity/userAssignedIdentities', '/', variables('userIdentity'))]": {}
+        }
+      },
       "properties": {
         "hardwareProfile": {
           "vmSize": "Standard_DC2ads_v5"
@@ -315,6 +309,9 @@
             "managedDisk": {
               "storageAccountType": "StandardSSD_LRS",
               "securityProfile": {
+                "diskEncryptionSet": {
+                  "id": "[resourceId('Microsoft.Compute/diskEncryptionSets', variables('diskencsetName'))]"
+                },
                 "securityEncryptionType": "DiskWithVMGuestState"
               }
             },
