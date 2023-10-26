@@ -37,25 +37,25 @@
                 "description": "UTC"
             }
         },
-        "objectId 1": {
+        "objectId": {
             "type": "string",
             "metadata": {
                 "description": "Specifies your object ID. Get it by using Get-AzADUser -SignedIn cmdlet."
             }
         },
-        "aadClientID 2": {
+        "aadClientID": {
             "type": "string",
             "metadata": {
                 "description": "Client ID of AAD app which has permissions to KeyVault"
             }
         },
-        "aadClientSecret 3": {
+        "aadClientSecret": {
             "type": "securestring",
             "metadata": {
                 "description": "Client Secret of AAD app which has permissions to KeyVault"
             }
         },
-        "aadOjectID 4": {
+        "aadOjectID": {
             "type": "string",
             "metadata": {
                 "description": "Object ID of AAD app which has permissions to KeyVault"
