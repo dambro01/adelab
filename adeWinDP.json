@@ -426,7 +426,7 @@
 			"properties": {
 				"mode": "Incremental",
 				"templateLink": {
-					"uri": "[variables('updateVmUrl')]",
+					"uri": "https://raw.githubusercontent.com/dambro01/adelab/main/dpupdatevm.json",
 					"contentVersion": "1.0.0.0"
 				},
 				"parameters": {
