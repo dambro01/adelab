@@ -3,7 +3,7 @@
 sleep 60
 if dpkg -s python3-parted >/dev/null 2>&1; then
     echo "python3-parted package is install ed. Removing it now..." >> /var/tmp/cse
-    apt-get remove python-parted python3-parted >> /var/tmp/cse 2>&1
+    apt-get remove python-parted python3-parted -y >> /var/tmp/cse 2>&1
     if [ $? -eq 0 ]; then
         echo "python3-parted package has been successfully removed." >> /var/tmp/cse
     else
