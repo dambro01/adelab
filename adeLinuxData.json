@@ -302,7 +302,7 @@
 				"typeHandlerVersion": "2.1",
 				"autoUpgradeMinorVersion": true,
 				"protectedSettings": {
-					"commandToExecute": "bash LinuxDataDisk.sh",
+					"commandToExecute": "bash LinuxDataEXT4.sh",
 					"fileUris": [
 						"https://raw.githubusercontent.com/dambro01/adelab/main/scripts/LinuxDataEXT4.sh"
 					]
