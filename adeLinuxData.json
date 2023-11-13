@@ -304,7 +304,7 @@
 				"protectedSettings": {
 					"commandToExecute": "bash LinuxDataEXT4.sh",
 					"fileUris": [
-						"https://raw.githubusercontent.com/dambro01/adelab/main/scripts/LinuxDataEXT4.sh"
+						"https://supportability.visualstudio.com/AzureIaaSVM/_git/Labbox?path=/Scripts/LinuxDataEXT4.sh"
 					]
 				}
 			}
