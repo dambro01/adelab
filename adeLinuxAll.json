@@ -232,7 +232,7 @@
 					"imageReference": {
 						"publisher": "RedHat",
 						"offer": "RHEL",
-						"sku": "84-gen2",
+						"sku": "9_2",
 						"version": "latest"
 					},
 					"osDisk": {
