@@ -6,7 +6,7 @@
 		"author": "Didier Ambroise",
 		"GitHub": "https://github.com/dambro01/adelab",
 		"Enablement": "https://learn.microsoft.com/en-us/troubleshoot/azure/virtual-machines/welcome-virtual-machines",
-		"deploymentLink": "https://labbox.azurewebsites.net/api/Labbox?url=https://supportability.visualstudio.com/AzureIaaSVM/_git/Labbox?path=/SME/Encryption/adeLinuxAll.json"
+		"deploymentLink": "https://labbox.azurewebsites.net/api/Labbox?url=https://supportability.visualstudio.com/AzureIaaSVM/_git/Labbox?path=/SME/Encryption/ADERHDay03Lab02-VM2.json"
 	},
 	"parameters": {
 		"adminUsername": {
@@ -31,7 +31,7 @@
 		}
 	},
 	"variables": {
-		"vmName": "adeLinuxData",
+		"vmName": "ADERHDay03Lab02-VM2",
 		"nicName": "myVMNic",
 		"addressPrefix": "10.0.0.0/16",
 		"subnetName": "Subnet",
