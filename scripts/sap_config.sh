@@ -75,6 +75,16 @@ sudo mount -a | tee -i -a "$logFile"
 echo "<<< Output of df -h >>>" >> $logFile
 df -h | tee -i -a "$logFile"
 
+# Download azcopy
+cd /var/tmp/
+wget -O azcopy_v10.tar.gz https://azcopyvnext.azureedge.net/releases/release-10.21.2-20231106/azcopy_linux_amd64_10.21.2.tar.gz && tar -xf azcopy_v10.tar.gz --strip-components=1
+if [ $? -eq 0 ]; then
+    /var/tmp/azcopy copy "https://diambroisap.blob.core.windows.net/sapsoftware/51057281.ZIP?sp=r&st=2023-11-16T18:35:36Z&se=2023-11-18T02:35:36Z&spr=https&sv=2022-11-02&sr=c&sig=Vbf7X%2B%2BbWVx6xBwzjWXAdQGmzMKK8V5MvXXVqm2pdws%3D" "/hana/shared/HN1/" --recursive=TRUE
+else
+    # If the first command failed, display an error message
+    echo "Error occurred while downloading or extracting azcopy_v10.tar.gz"
+fi
+
 echo "<<< install socat >>>" >> $logFile
 sudo zypper -n install socat | tee -i -a "$logFile"
 
