@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Establish variables
-sapInstanceId="HN1"
-sapPassword="Pa55w.rd1234!"
+sapInstanceId="$1"
+sapPassword="$2"
 
 # Set up log file
 set -v -x -E
