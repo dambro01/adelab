@@ -1,0 +1,160 @@
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Azure Service Insights EEE RDOS Start Hub Portal</title>
+</head>
+<body>
+  <h2>Azure Service Insights EEE RDOS Start Hub Link Generator</h2>
+
+  <label for="computerName">VM Name, Resource URI, VM ID, or container ID:</label>
+  <input type="text" id="computerName" placeholder="Enter computer name"><br><br>
+
+  <label for="dateTime">Date and Time of restart:</label>
+  <input type="datetime-local" id="dateTime"><br><br>
+
+  <button onclick="generateLink()">Open Start Hub</button>
+  <p id="TSGLink" style="margin-top: 2rem;"> <a href="https://supportability.visualstudio.com/AzureIaaSVM/_wiki/wikis/AzureIaaSVM/496376/Basic-Workflow_Restarts?anchor=troubleshooting-in-azure-service-insights-(asi)-eee-rdos-start-hub"target="_blank"> EEE RDOS Start Hub TSG</a></p>
+	
+
+  <script>
+	
+	window.onload = function () {
+	  const now = new Date();
+	  const utcYear = now.getUTCFullYear();
+	  const utcMonth = String(now.getUTCMonth() + 1).padStart(2, '0');
+	  const utcDay = String(now.getUTCDate()).padStart(2, '0');
+	  const utcHours = String(now.getUTCHours()).padStart(2, '0');
+	  const utcMinutes = String(now.getUTCMinutes()).padStart(2, '0');
+
+	  const utcDateTime = `${utcYear}-${utcMonth}-${utcDay}T${utcHours}:${utcMinutes}`;
+	  document.getElementById('dateTime').value = utcDateTime;
+	};
+
+    function pad(n) {
+      return n < 10 ? '0' + n : n;
+    }
+
+    function formatDate(date) {
+      return date.getFullYear() + '-' +
+             pad(date.getMonth() + 1) + '-' +
+             pad(date.getDate()) + 'T' +
+             pad(date.getHours()) + ':' +
+             pad(date.getMinutes());
+    }
+ 
+function generateLink() {
+  const computerName = encodeURIComponent(document.getElementById('computerName').value.trim());
+  const dateTimeInput = document.getElementById('dateTime').value;
+
+  if (!computerName || !dateTimeInput) {
+    alert("Please enter both computer name and date/time.");
+    return;
+  }
+
+  const inputDate = new Date(dateTimeInput);
+
+  // Adjust times: subtract 1h30m for globalFrom, add 1h for globalTo
+  const globalFrom = new Date(inputDate.getTime() - (1.5 * 60 * 60 * 1000));
+  const globalTo = new Date(inputDate.getTime() + (1 * 60 * 60 * 1000));
+
+  const formattedFrom = formatDate(globalFrom) + 'Z';
+  const formattedTo = formatDate(globalTo) + ':00Z';
+
+  const baseUrl = 'https://azureserviceinsights.trafficmanager.net/search/services/EEE%20RDOS';
+  const fullUrl = `${baseUrl}?searchText=${computerName}&globalFrom=${formattedFrom}&globalTo=${formattedTo}&resources=%5B%22Start+Hub%22%5D`;
+
+  // Open the link in a new tab
+  window.open(fullUrl, '_blank');
+}
+
+  </script>
+  <style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 2rem;
+    color: #333;
+  }
+
+  h2 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+  }
+
+  label {
+    display: block;
+    margin-top: 1rem;
+    font-weight: 600;
+  }
+
+  input[type="text"],
+  input[type="datetime-local"] {
+    width: 100%;
+    max-width: 400px;
+    padding: 0.6rem;
+    margin-top: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+    box-sizing: border-box;
+  }
+
+  button {
+    margin-top: 1.5rem;
+    padding: 0.7rem 1.5rem;
+    background-color: #0078d4;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  button:hover {
+    background-color: #005ea2;
+  }
+
+  h3 {
+    margin-top: 2rem;
+    color: #2c3e50;
+  }
+
+  #linkContainer {
+    margin-top: 0.5rem;
+    background: #fff;
+    padding: 1rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    word-break: break-word;
+  }
+
+  a {
+    color: #0078d4;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 600px) {
+    input[type="text"],
+    input[type="datetime-local"],
+    button {
+      width: 100%;
+    }
+  }
+
+  input[type="datetime-local"] {
+    font-family: monospace;
+  }
+</style>
+</body>
+</html>
